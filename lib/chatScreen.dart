@@ -49,15 +49,18 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Message> messages = [];
   // ignore: prefer_typing_uninitialized_variables
   late IO.Socket socket;
-  late final String user;
+  late String user = '';
+  bool isMounted = false;
+
   // ... (previous code)
 
   @override
   void initState() {
     super.initState();
+    isMounted = true;
     // Initialize the socket connection in initState
     socket = IO.io(
-      'http://localhost:3000',
+      'http://192.168.161.176:3000',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
@@ -68,7 +71,11 @@ class _ChatScreenState extends State<ChatScreen> {
     socket.onConnect(
       (_) {
         debugPrint('connected');
-        user = socket.id!;
+        if (isMounted) {
+          setState(() {
+            user = socket.id!;
+          });
+        }
       },
     );
 
@@ -85,9 +92,11 @@ class _ChatScreenState extends State<ChatScreen> {
           userName: data['userName'] ?? '',
           text: data['text'] ?? '',
           createdAt: data['createdAt'].toString());
-      setState(() {
-        messages.add(message);
-      });
+      if (isMounted) {
+        setState(() {
+          messages.add(message);
+        });
+      }
     });
 
     socket.connect();
@@ -95,6 +104,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    isMounted = false;
     socket.disconnect();
     super.dispose();
   }
@@ -146,9 +156,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final message = _messageController.text;
     if (message.isNotEmpty) {
       socket.emit('message', message);
-      setState(() {
-        _messageController.text = '';
-      });
+
+      if (isMounted) {
+        setState(() {
+          _messageController.text = '';
+        });
+      }
     }
   }
 }
